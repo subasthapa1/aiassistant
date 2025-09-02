@@ -25,13 +25,16 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.tools import tool
 from langgraph.graph import StateGraph, END
 
+
+
 # --------------------------------------------------
 # Gmail Setup
 # --------------------------------------------------
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 # Load the .env file for credentials
-load_dotenv('..\\credentials\\.env')
+load_dotenv('credentials\\.env')
+
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 if not openai_api_key:
@@ -40,12 +43,12 @@ if not openai_api_key:
 
 def get_gmail_service():
     creds = None
-    if os.path.exists("..\\credentials\\token.json"):
-        creds = Credentials.from_authorized_user_file("..\\credentials\\token.json", SCOPES)
+    if os.path.exists("credentials\\token.json"):
+        creds = Credentials.from_authorized_user_file("credentials\\token.json", SCOPES)
     if not creds or not creds.valid:
-        flow = InstalledAppFlow.from_client_secrets_file("..\\credentials\\credentials.json", SCOPES)
+        flow = InstalledAppFlow.from_client_secrets_file("credentials\\credentials.json", SCOPES)
         creds = flow.run_local_server(port=0)
-        with open("..\\credentials\\token.json", "w") as token:
+        with open("credentials\\token.json", "w") as token:
             token.write(creds.to_json())
     return build("gmail", "v1", credentials=creds)
 

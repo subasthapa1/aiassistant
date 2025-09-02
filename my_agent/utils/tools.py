@@ -1,39 +1,36 @@
-import os
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import tool
-from dotenv import load_dotenv
 
-# Load .env file using relative path
-dotenv_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'credentials', '.env')
-)
-load_dotenv(dotenv_path)  # <-- You missed this in your code
-
-# Get the key
-openai_key = os.getenv("OPENAI_API_KEY")
-if not openai_key:
-    raise ValueError("OPENAI_API_KEY not found in environment variables.")
-
-# Define the tool
 @tool
-def multiply(a: int, b: int) -> int:
-    """Multiply a and b."""
-    return a * b
+def fetch_email() -> int:
+    """Fetch email from the mail.
 
-# Tool creation
-tools = [multiply]
+    Args:
+        from: Sender's email
+        subject: Title of an email
+        date: Email received date
+        message: Email's content
 
-# Create model with API key
-model = ChatOpenAI(model="gpt-4o-mini", api_key=openai_key)
+    """
+    return true
 
-# Bind tools to the model
-model_with_tools = model.bind_tools(tools)
 
-# User input
-user_input = "Multiply 2 and 3"
+@tool
+def create_draft_email(a: int, b: int) -> int:
+    """Adds a and b.
 
-# Invoke the model
-response = model_with_tools.invoke(user_input)
+    Args:
+        a: first int
+        b: second int
+    """
+    return a + b
 
-# Output tool calls
-print(response.tool_calls)
+
+@tool
+def summarize_email() -> float:
+    """Read all emails received on a specific time frame and summarize them.
+
+    Args:
+        a: first int
+        b: second int
+    """
+    return a / b

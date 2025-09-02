@@ -73,11 +73,11 @@ def main():
     os.makedirs("..\\..\\data", exist_ok=True)
 
     # Save results to JSON
-    output_file = f"..\\..\\data\\emails_{datetime.date.today().strftime('%Y_%m_%d')}.json"
+    output_file = f"..\\..\\data\\email_content.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(emails_data, f, indent=4, ensure_ascii=False)
 
-    print(f"\n✅ Saved {len(emails_data)} emails to {output_file}")
+    print(f"\n Saved {len(emails_data)} emails to {output_file}")
 
 if __name__ == '__main__':
     main()
