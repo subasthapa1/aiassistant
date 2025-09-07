@@ -1,88 +1,38 @@
 """
-Streamlit Web Interface for email agent
-
-This provides an interactive web interface to test the email assistant agent
-with different execution methods.
+Streamlit Web Interface for Email Agent
+----------------------------------------
+This app connects to Gmail, fetches unread emails, summarizes them,
+checks if a reply is needed, drafts a response, and can send it.
 """
-
-import os
-import asyncio
+# streamlit_app.py
 import streamlit as st
-from dotenv import load_dotenv
-from langchain.agents import Agent
-from agent import get_gmail_service,summarize_email_tool,check_reply_tool, generate_reply_tool, send_email_tool, fetch_unread_emails_tool
+from langchain_core.messages import HumanMessage
+from agent import app  # Import the compiled agent graph
 
-# Load environment variables
-load_dotenv('..\\credentials\\.env')
+# --- Streamlit UI ---
+st.set_page_config(page_title="📧 Gmail AI Assistant", layout="centered")
 
-# Page configuration
-st.set_page_config(
-    page_title="Personal Email Assistant Agent",
-    page_icon="🎯",
-    layout="wide"
-)
+st.title("📧 Gmail AI Assistant")
+st.write("Ask me to check unread emails, summarize them, or draft replies.")
 
-# Title and description
-st.title("🎯 Personal Email Assistant Agent")
-st.markdown("Email Assistant Agent")
-st.write(
-    "This app reads my Gmail, summarizes emails, checks if a reply is needed, drafts a response, and can send it.")
+# Input from user
+user_query = st.text_area("Enter your request:", "Check my unread emails")
 
-# Check API key
-if not os.getenv("OPENAI_API_KEY"):
-    st.error("❌ OPENAI_API_KEY not found. Please create a .env file with your OpenAI API key.")
-    st.stop()
+if st.button("Run Agent"):
+    if user_query.strip():
+        # Create input for the LangGraph agent
+        inputs = {"messages": [HumanMessage(content=user_query)]}
 
-# Sidebar for settings
-st.sidebar.header("Settings")
-max_results = st.sidebar.slider("Number of emails to fetch", 1, 10, 5)
+        # Stream the response
+        response_placeholder = st.empty()
+        collected_response = ""
 
-# Fetch emails button
-if st.sidebar.button("Fetch Unread Emails"):
-    with st.spinner("Fetching emails..."):
-        emails = fetch_unread_emails_tool.invoke({"max_results": max_results})
-    if not emails:
-        st.info("✅ No unread emails found.")
+        for step in app.stream(inputs, stream_mode="values"):
+            message = step["messages"][-1]
+            text = getattr(message, "content", str(message))
+            collected_response += text + "\n"
+            response_placeholder.markdown(collected_response)
+
+        st.success("Done ✅")
     else:
-        st.session_state["emails"] = emails
-
-# Display fetched emails
-if "emails" in st.session_state:
-    st.subheader("Unread Emails")
-    for idx, email in enumerate(st.session_state["emails"], start=1):
-        with st.expander(f"📩 {idx}. {email['subject']} (from {email['sender']})"):
-            st.write("**Snippet:**", email["snippet"])
-            if st.button(f"Process this email", key=f"process_{idx}"):
-                with st.spinner("Processing with AI..."):
-                    result = email_app.invoke({
-                        "email": email["snippet"],
-                        "recipient": email["sender"],
-                        "subject": email["subject"]
-                    })
-                st.session_state["result"] = result
-                st.session_state["selected_email"] = email
-
-# Show AI Results
-if "result" in st.session_state:
-    result = st.session_state["result"]
-    email = st.session_state["selected_email"]
-
-    st.subheader("AI Analysis & Draft Reply")
-    st.write("**Summary:**", result["summary"])
-    st.write("**Needs Reply?**", "✅ Yes" if result["needs_reply"] else "❌ No")
-
-    if result["draft_reply"]:
-        st.text_area("Draft Reply", value=result["draft_reply"], height=200, key="draft_area")
-
-        if st.button("Send Reply"):
-            with st.spinner("Sending email..."):
-                send_result = email_app.invoke({
-                    "email": email["snippet"],
-                    "recipient": email["sender"],
-                    "subject": email["subject"],
-                    "draft_reply": st.session_state["draft_area"],
-                    "needs_reply": True
-                })
-            st.success(send_result["status"])
-    else:
-        st.info("This email doesn’t need a reply.")
+        st.warning("Please enter a request.")
