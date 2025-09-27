@@ -59,8 +59,8 @@ gmail_service = get_gmail_service()
 # --- LangGraph Agent ---
 
 class MessageClassifier(BaseModel):
-    message_type: Literal["reply", "summarise"] = Field(
-        ..., description="Summarize email received and propose a draft response"
+    message_type: Literal["reply", "summarise","needs attention"] = Field(
+        ..., description="Classify the task. Use 'summarise' to summarize the email, or 'reply' to draft a response."
     )
 
 class AgentState(TypedDict):
@@ -79,9 +79,9 @@ def get_all_emails():
     return email_data
 
 @tool
-def identify_unanswered_email():
+def identify_important_unanswered_email():
     """Identify unread emails in Gmail inbox"""
-    results = gmail_service.users().messages().list(userId="me", labelIds=["INBOX", "UNREAD"], maxResults=5).execute()
+    results = gmail_service.users().messages().list(userId="me", labelIds=["INBOX", "UNREAD"], maxResults=10).execute()
     messages = results.get("messages", [])
     if not messages:
         return "No unread emails."
@@ -94,20 +94,23 @@ def identify_unanswered_email():
 
 @tool
 def propose_draft_response(to: str, subject: str, body: str):
-    """Send a draft response via Gmail"""
-    message = MIMEText(body)
-    message["to"] = to
-    message["subject"] = subject
-    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    gmail_service.users().messages().send(userId="me", body={"raw": raw}).execute()
-    return f"Draft response sent to {to}"
+    """
+        Propose a draft email response.
+        Does NOT send anything to Gmail — just returns the draft for review.
+        """
+    return {
+        "to": to,
+        "subject": subject,
+        "body": body,
+        "status": "💡 Draft response proposed. Not sent."
+    }
 
-tools = [identify_unanswered_email, get_all_emails]
+tools = [identify_important_unanswered_email, get_all_emails, propose_draft_response]
 
 model = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, api_key=openai_api_key).bind_tools(tools)
 
 def model_call(state: AgentState) -> AgentState:
-    system_prompt = SystemMessage(content="You are my AI email assistant. Help me read, summarize, and reply to Gmail messages.")
+    system_prompt = SystemMessage(content="You are my AI email assistant. Help me read, summarize,identify important unanswered emails, and propose a draft response to Gmail messages.")
     response = model.invoke([system_prompt] + state["messages"])
     return {"messages": [response]}
 
